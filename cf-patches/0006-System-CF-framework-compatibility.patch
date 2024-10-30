@@ -1,0 +1,106 @@
+diff --git a/CoreFoundation/CMakeLists.txt b/CoreFoundation/CMakeLists.txt
+index f126c298..587a8615 100644
+--- a/CoreFoundation/CMakeLists.txt
++++ b/CoreFoundation/CMakeLists.txt
+@@ -144,6 +144,8 @@ add_framework(CoreFoundation
+                 ${FRAMEWORK_LIBRARY_TYPE}
+               FRAMEWORK_DIRECTORY
+                 CoreFoundation_FRAMEWORK_DIRECTORY
++              VERSION
++                A
+               MODULE_MAP
+                 Base.subproj/module.modulemap
+               PRIVATE_HEADERS
+@@ -451,6 +453,8 @@ add_framework(CFURLSessionInterface
+                 ${FRAMEWORK_LIBRARY_TYPE}
+               FRAMEWORK_DIRECTORY
+                 CFURLSessionInterface_FRAMEWORK_DIRECTORY
++              VERSION
++                A
+               MODULE_MAP
+                 URL.subproj/module.modulemap
+               PRIVATE_HEADERS
+@@ -474,6 +478,8 @@ add_framework(CFXMLInterface
+                 ${FRAMEWORK_LIBRARY_TYPE}
+               FRAMEWORK_DIRECTORY
+                 CFXMLInterface_FRAMEWORK_DIRECTORY
++              VERSION
++                A
+               MODULE_MAP
+                 Parsing.subproj/module.modulemap
+               PRIVATE_HEADERS
+diff --git a/CoreFoundation/cmake/modules/CoreFoundationAddFramework.cmake b/CoreFoundation/cmake/modules/CoreFoundationAddFramework.cmake
+index 4b7ccb93..c899b1d0 100644
+--- a/CoreFoundation/cmake/modules/CoreFoundationAddFramework.cmake
++++ b/CoreFoundation/cmake/modules/CoreFoundationAddFramework.cmake
+@@ -3,7 +3,7 @@ include(CMakeParseArguments)
+
+ function(add_framework NAME)
+   set(options STATIC SHARED)
+-  set(single_value_args MODULE_MAP FRAMEWORK_DIRECTORY)
++  set(single_value_args MODULE_MAP FRAMEWORK_DIRECTORY VERSION)
+   set(multiple_value_args PRIVATE_HEADERS PUBLIC_HEADERS SOURCES)
+   cmake_parse_arguments(AF "${options}" "${single_value_args}" "${multiple_value_args}" ${ARGN})
+
+@@ -14,34 +14,40 @@ function(add_framework NAME)
+     set(AF_TYPE SHARED)
+   endif()
+
++  file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/${NAME}.framework/Versions/${AF_VERSION})
++  file(CREATE_LINK ${AF_VERSION} ${CMAKE_BINARY_DIR}/${NAME}.framework/Versions/Current SYMBOLIC)
++
+   if(AF_MODULE_MAP)
+     file(COPY
+            ${AF_MODULE_MAP}
+          DESTINATION
+-           ${CMAKE_BINARY_DIR}/${NAME}.framework/Modules
++           ${CMAKE_BINARY_DIR}/${NAME}.framework/Versions/Current/Modules
+          NO_SOURCE_PERMISSIONS)
++    file(CREATE_LINK Versions/Current/Modules ${CMAKE_BINARY_DIR}/${NAME}.framework/Modules SYMBOLIC)
+   endif()
+   if(AF_PUBLIC_HEADERS)
+     foreach(HEADER IN LISTS AF_PUBLIC_HEADERS)
+       get_filename_component(HEADER_FILENAME ${HEADER} NAME)
+-      set(DEST ${CMAKE_BINARY_DIR}/${NAME}.framework/Headers/${HEADER_FILENAME})
++      set(DEST ${CMAKE_BINARY_DIR}/${NAME}.framework/Versions/Current/Headers/${HEADER_FILENAME})
+       add_custom_command(OUTPUT ${DEST}
+                          DEPENDS ${HEADER}
+                          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                          COMMAND ${CMAKE_COMMAND} -E copy ${HEADER} ${DEST})
+       list(APPEND PUBLIC_HEADER_PATHS ${DEST})
+     endforeach()
++    file(CREATE_LINK Versions/Current/Headers ${CMAKE_BINARY_DIR}/${NAME}.framework/Headers SYMBOLIC)
+   endif()
+   if(AF_PRIVATE_HEADERS)
+     foreach(HEADER IN LISTS AF_PRIVATE_HEADERS)
+       get_filename_component(HEADER_FILENAME ${HEADER} NAME)
+-      set(DEST ${CMAKE_BINARY_DIR}/${NAME}.framework/PrivateHeaders/${HEADER_FILENAME})
++      set(DEST ${CMAKE_BINARY_DIR}/${NAME}.framework/Versions/Current/PrivateHeaders/${HEADER_FILENAME})
+       add_custom_command(OUTPUT ${DEST}
+                          DEPENDS ${HEADER}
+                          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                          COMMAND ${CMAKE_COMMAND} -E copy ${HEADER} ${DEST})
+       list(APPEND PRIVATE_HEADER_PATHS ${DEST})
+     endforeach()
++    file(CREATE_LINK Versions/Current/PrivateHeaders ${CMAKE_BINARY_DIR}/${NAME}.framework/PrivateHeaders SYMBOLIC)
+   endif()
+   add_custom_target(${NAME}_POPULATE_HEADERS
+                     DEPENDS
+@@ -59,7 +65,7 @@ function(add_framework NAME)
+   set_target_properties(${NAME}
+                         PROPERTIES
+                           LIBRARY_OUTPUT_DIRECTORY
+-                              ${CMAKE_BINARY_DIR}/${NAME}.framework)
++                              ${CMAKE_BINARY_DIR}/${NAME}.framework/Versions/Current)
+   if("${CMAKE_C_SIMULATE_ID}" STREQUAL "MSVC")
+     target_compile_options(${NAME}
+                            PRIVATE
+@@ -74,6 +80,8 @@ function(add_framework NAME)
+                            $<$<OR:$<COMPILE_LANGUAGE:ASM>,$<COMPILE_LANGUAGE:C>>:-I;${CMAKE_BINARY_DIR}/${NAME}.framework/PrivateHeaders>)
+   add_dependencies(${NAME} ${NAME}_POPULATE_HEADERS)
+
++  file(CREATE_LINK Versions/Current/${NAME} ${CMAKE_BINARY_DIR}/${NAME}.framework/${NAME} SYMBOLIC)
++
+   if(AF_FRAMEWORK_DIRECTORY)
+     set(${AF_FRAMEWORK_DIRECTORY} ${CMAKE_BINARY_DIR}/${NAME}.framework PARENT_SCOPE)
+   endif()

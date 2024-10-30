@@ -1,0 +1,26 @@
+diff --git a/CoreFoundation/CMakeLists.txt b/CoreFoundation/CMakeLists.txt
+index f126c298..dc44075a 100644
+--- a/CoreFoundation/CMakeLists.txt
++++ b/CoreFoundation/CMakeLists.txt
+@@ -249,7 +249,7 @@ add_framework(CoreFoundation
+                 Base.subproj/CFByteOrder.h
+                 Base.subproj/CFUUID.h
+                 Base.subproj/CFUtilities.h
+-                Base.subproj/SwiftRuntime/CoreFoundation.h
++                Base.subproj/CoreFoundation.h  # The SwiftRuntime version of this file causes linker errors and is not correct for standalone CF.
+                 Base.subproj/SwiftRuntime/TargetConditionals.h
+                 # Collections
+                 Collections.subproj/CFArray.h
+@@ -363,9 +363,9 @@ add_framework(CoreFoundation
+                 Preferences.subproj/CFXMLPreferencesDomain.c
+                 # RunLoop
+                 # TODO(compnerd) make this empty on non-Mach targets
+-                # RunLoop.subproj/CFMachPort.c
+-                # RunLoop.subproj/CFMachPort_Lifetime.c
+-                # RunLoop.subproj/CFMessagePort.c
++                RunLoop.subproj/CFMachPort.c   # These files are missing from the upstream `CMakeLists.txt` but required to build on Darwin.
++                RunLoop.subproj/CFMachPort_Lifetime.c
++                RunLoop.subproj/CFMessagePort.c
+                 RunLoop.subproj/CFRunLoop.c
+                 RunLoop.subproj/CFSocket.c
+                 # Stream
